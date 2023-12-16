@@ -18,6 +18,40 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const dbPath = path.resolve(__dirname, 'donnees.db');
 const db = new sqlite3.Database(dbPath);
 
+
+// Route pour formulaire contact
+app.post('/contact', (req, res) => {
+  const { name, email, message } = req.body;
+
+  // Create a Nodemailer transporter
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: 'arthur.magnette.sio@gmail.com', // Adresse mail
+      pass: 'your-gmail-password',  // pw_gmail
+    },
+  });
+
+  // Setup email data
+  const mailOptions = {
+    from: 'arthur.magnette.sio@gmail.com', // Expéditeur address
+    to: 'arthur.magnette.sio@gmail.com', // Destinataire address
+    subject: '[Prestige AUTO]New Contact Form Submission',
+    text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`,
+  };
+
+  // Send the email
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error('Error sending email:', error);
+      return res.status(500).json({ error: 'Error sending email' });
+    }
+
+    console.log('Email sent:', info.response);
+    res.status(200).json({ success: true });
+  });
+});
+
 // Route pour gérer l'inscription
 app.post('/inscription', (req, res) => {
     const { nom, prenom, adresse, codePostal, ville, telephone, email, mdp } = req.body;
