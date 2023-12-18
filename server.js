@@ -65,7 +65,13 @@ app.post('/inscription', (req, res) => {
     db.run(sql, values, (err) => {
       if (err) {
         console.error('Erreur lors de l\'inscription :', err);
-        res.status(500).json({ error: 'Erreur lors de l\'inscription' });
+  
+        // Vérifiez si l'erreur est due à une contrainte unique (email déjà utilisé)
+        if (err.code === 'SQLITE_CONSTRAINT' && err.errno === 19) {
+          res.status(400).json({ error: 'Email déjà utilisé' });
+        } else {
+          res.status(500).json({ error: 'Erreur lors de l\'inscription' });
+        }
       } else {
         console.log('Utilisateur inscrit avec succès.');
         res.status(200).json({ success: true });
