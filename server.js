@@ -233,6 +233,48 @@ app.get('/vehicules', (req, res) => {
   });
 });
 
+// Route pour charger les dates indisponibles pour un véhicule
+app.get('/datesIndisponibles', (req, res) => {
+  const { vehiculeId } = req.query;
+
+  // Vérifiez si le véhicule existe
+  const checkVehiculeExistence = 'SELECT id FROM voitures WHERE id = ?';
+  db.get(checkVehiculeExistence, [vehiculeId], (err, vehiculeRow) => {
+    if (err) {
+      console.error('Erreur lors de la vérification de l\'existence du véhicule :', err);
+      return res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+
+    if (!vehiculeRow) {
+      return res.status(404).json({ error: 'Véhicule non trouvé' });
+    }
+
+    // Vérifiez les dates indisponibles pour le véhicule spécifié
+    const getDatesIndisponibles = `
+      SELECT date_reservation_1 AS start, date_reservation_2 AS end
+      FROM rdv
+      WHERE voiture_id = ?;
+    `;
+
+    db.all(getDatesIndisponibles, [vehiculeId], (err, rows) => {
+      if (err) {
+        console.error('Erreur lors de la récupération des dates indisponibles :', err);
+        return res.status(500).json({ error: 'Erreur interne du serveur' });
+      }
+
+      // Renvoie les dates indisponibles
+      const datesIndisponibles = rows.map(row => ({
+        start: row.start,
+        end: row.end,
+      }));
+
+      res.status(200).json(datesIndisponibles);
+    });
+  });
+});
+
+
+
 
 // Route pour la réservation
 app.post('/reservations', verifyToken, (req, res) => {
@@ -259,9 +301,9 @@ app.post('/reservations', verifyToken, (req, res) => {
     SELECT COUNT(*) AS count
     FROM rdv
     WHERE voiture_id = ? AND (
-      (date_reservation_1 < ? AND date_reservation_2 > ?) OR
-      (date_reservation_1 < ? AND date_reservation_2 > ?) OR
-      (date_reservation_1 >= ? AND date_reservation_2 <= ?)
+      (date_reservation_1 BETWEEN ? AND ?) OR
+      (date_reservation_2 BETWEEN ? AND ?) OR
+      (date_reservation_1 <= ? AND date_reservation_2 >= ?)
     )
     `;
     const disponibiliteValues = [vehicule, dateDebut, dateFin, dateDebut, dateFin];
