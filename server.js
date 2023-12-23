@@ -218,9 +218,10 @@ app.get('/modeles', (req, res) => {
   });
 });
 
+
 // Route pour charger les véhicules
 app.get('/vehicules', (req, res) => {
-  const { modele } = req.query; // Utilisez req.query pour récupérer le modèle depuis la requête
+  const { modele } = req.query;
   const sql = 'SELECT * FROM voitures where categorie_id = ?';
   const values = [modele];
   db.all(sql, values, (err, rows) => {
