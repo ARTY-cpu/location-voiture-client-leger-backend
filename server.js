@@ -54,30 +54,30 @@ app.post('/contact', (req, res) => {
 
 // Route pour gérer l'inscription
 app.post('/inscription', (req, res) => {
-    const { nom, prenom, adresse, codePostal, ville, telephone, email, mdp } = req.body;
-  
-    // Logique de hachage du mot de passe ici
-  
-    // Utiliser une requête préparée pour insérer les données dans la base de données
-    const sql = 'INSERT INTO utilisateurs (nom, prenom, adresse, code_postal, ville, telephone, email, mdp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
-    const values = [nom, prenom, adresse, codePostal, ville, telephone, email, mdp];
-  
-    db.run(sql, values, (err) => {
-      if (err) {
-        console.error('Erreur lors de l\'inscription :', err);
-  
-        // Vérifiez si l'erreur est due à une contrainte unique (email déjà utilisé)
-        if (err.code === 'SQLITE_CONSTRAINT' && err.errno === 19) {
-          res.status(400).json({ error: 'Email déjà utilisé' });
-        } else {
-          res.status(500).json({ error: 'Erreur lors de l\'inscription' });
-        }
+  const { nom, prenom, adresse, codePostal, ville, telephone, email, mdp } = req.body;
+
+  // Logique de hachage du mot de passe ici
+
+  // Utiliser une requête préparée pour insérer les données dans la base de données
+  const sql = 'INSERT INTO utilisateurs (nom, prenom, adresse, code_postal, ville, telephone, email, mdp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+  const values = [nom, prenom, adresse, codePostal, ville, telephone, email, mdp];
+
+  db.run(sql, values, (err) => {
+    if (err) {
+      console.error('Erreur lors de l\'inscription :', err);
+
+      // Vérifiez si l'erreur est due à une contrainte unique (email déjà utilisé)
+      if (err.code === 'SQLITE_CONSTRAINT' && err.errno === 19) {
+        res.status(400).json({ error: 'Email déjà utilisé' });
       } else {
-        console.log('Utilisateur inscrit avec succès.');
-        res.status(200).json({ success: true });
+        res.status(500).json({ error: 'Erreur lors de l\'inscription' });
       }
-    });
+    } else {
+      console.log('Utilisateur inscrit avec succès.');
+      res.status(200).json({ success: true });
+    }
   });
+});
 
 
 // Route pour la connexion
@@ -132,11 +132,11 @@ function verifyToken(req, res, next) {
         return res.status(401).json({ error: 'Token authentication failed' });
       }
     }
-  
+
     console.log('Decoded token:', decoded);
     req.user = decoded;
     next();
-  });  
+  });
 }
 
 
@@ -204,6 +204,95 @@ app.post('/desactiver-compte', verifyToken, (req, res) => {
   });
 });
 
+
+// Route pour charger les modèles
+app.get('/modeles', (req, res) => {
+  const sql = 'SELECT * FROM categories';
+  db.all(sql, (err, rows) => {
+    if (err) {
+      console.error('Erreur lors du chargement des modèles :', err);
+      res.status(500).json({ error: 'Erreur interne du serveur' });
+    } else {
+      res.status(200).json(rows);
+    }
+  });
+});
+
+// Route pour charger les véhicules
+app.get('/vehicules', (req, res) => {
+  const { modele } = req.query; // Utilisez req.query pour récupérer le modèle depuis la requête
+  const sql = 'SELECT * FROM voitures where categorie_id = ?';
+  const values = [modele];
+  db.all(sql, values, (err, rows) => {
+    if (err) {
+      console.error('Erreur lors du chargement des véhicules :', err);
+      res.status(500).json({ error: 'Erreur interne du serveur' });
+    } else {
+      res.status(200).json(rows);
+    }
+  });
+});
+
+
+// Route pour la réservation
+app.post('/reservations', verifyToken, (req, res) => {
+  const { email } = req.user;
+  const { modele, vehicule, dateDebut, dateFin } = req.body;
+
+  // Récupérer l'ID du client associé à l'adresse e-mail
+  const getClientIdQuery = 'SELECT id FROM utilisateurs WHERE email = ?';
+  db.get(getClientIdQuery, [email], (err, row) => {
+    if (err) {
+      console.error('Erreur lors de la récupération de l\'ID du client :', err);
+      return res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+
+    if (!row) {
+      // Aucun client trouvé avec cette adresse e-mail
+      return res.status(404).json({ error: 'Utilisateur non trouvé avec cette adresse e-mail' });
+    }
+
+    const clientId = row.id;
+
+    // Vérifier la disponibilité du véhicule pour la période spécifiée
+    const checkDisponibilite = `
+    SELECT COUNT(*) AS count
+    FROM rdv
+    WHERE voiture_id = ? AND (
+      (date_reservation_1 < ? AND date_reservation_2 > ?) OR
+      (date_reservation_1 < ? AND date_reservation_2 > ?) OR
+      (date_reservation_1 >= ? AND date_reservation_2 <= ?)
+    )
+    `;
+    const disponibiliteValues = [vehicule, dateDebut, dateFin, dateDebut, dateFin];
+
+    db.get(checkDisponibilite, disponibiliteValues, (err, row) => {
+      if (err) {
+        console.error('Erreur lors de la vérification de la disponibilité du véhicule :', err);
+        return res.status(500).json({ error: 'Erreur interne du serveur' });
+      }
+
+      if (row.count > 0) {
+        // Le véhicule n'est pas disponible pour la période spécifiée
+        return res.status(400).json({ error: 'Véhicule non disponible pour cette période' });
+      }
+
+      // Le véhicule est disponible, procéder à la réservation
+      const reservationSql = 'INSERT INTO rdv (date_reservation_1, date_reservation_2, voiture_id, client_id, statut) VALUES (?, ?, ?, ?, ?)';
+      const reservationValues = [dateDebut, dateFin, vehicule, clientId, 'En attente'];
+
+      db.run(reservationSql, reservationValues, (err) => {
+        if (err) {
+          console.error('Erreur lors de la réservation :', err);
+          return res.status(500).json({ error: 'Erreur interne du serveur' });
+        }
+
+        // Réservation réussie
+        res.status(200).json({ success: true });
+      });
+    });
+  });
+});
 
 
 // Démarrer le serveur
