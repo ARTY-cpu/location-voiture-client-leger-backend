@@ -23,7 +23,7 @@ const db = new sqlite3.Database(dbPath);
 app.post('/contact', (req, res) => {
   const { name, email, message } = req.body;
 
-  // Create a Nodemailer transporter
+  // Nodemailer transporter
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -51,6 +51,7 @@ app.post('/contact', (req, res) => {
     res.status(200).json({ success: true });
   });
 });
+
 
 // Route pour gérer l'inscription
 app.post('/inscription', (req, res) => {
@@ -113,7 +114,6 @@ app.post('/connexion', (req, res) => {
 });
 
 
-
 // Middleware pour vérifier le jeton JWT
 function verifyToken(req, res, next) {
   const token = req.headers['authorization'].trim();
@@ -138,7 +138,6 @@ function verifyToken(req, res, next) {
     next();
   });
 }
-
 
 
 // Route pour récupérer les données de l'utilisateur connecté
@@ -184,7 +183,6 @@ app.put('/user', verifyToken, (req, res) => {
 });
 
 
-
 // route desactivation compte
 app.post('/desactiver-compte', verifyToken, (req, res) => {
   const { email } = req.user;
@@ -219,20 +217,47 @@ app.get('/modeles', (req, res) => {
 });
 
 
-// Route pour charger les véhicules
-app.get('/vehicules', (req, res) => {
-  const { modele } = req.query;
-  const sql = 'SELECT * FROM voitures where categorie_id = ?';
-  const values = [modele];
-  db.all(sql, values, (err, rows) => {
-    if (err) {
-      console.error('Erreur lors du chargement des véhicules :', err);
-      res.status(500).json({ error: 'Erreur interne du serveur' });
-    } else {
-      res.status(200).json(rows);
-    }
-  });
+// Route pour charger les rdv
+app.get('/listeresa', verifyToken, (req, res) => {
+  try {
+    const { email } = req.user;
+
+    const getClientIdQuery = 'SELECT id FROM utilisateurs WHERE email = ?';
+    db.get(getClientIdQuery, [email], (err, row) => {
+      if (err) {
+        console.error('Erreur lors de la récupération de l\'ID du client :', err);
+        return res.status(500).json({ error: 'Erreur interne du serveur' });
+      }
+
+      if (!row) {
+        // Aucun client trouvé avec cette adresse e-mail
+        return res.status(404).json({ error: 'Utilisateur non trouvé avec cette adresse e-mail' });
+      }
+
+      const clientId = row.id;
+
+      // Sélectionner les rendez-vous en attente pour le client
+      const listereservationSql = 'SELECT * FROM rdv WHERE client_id = ? AND statut = ?';
+      const reservationValues = [clientId, 'En attente'];
+
+      db.all(listereservationSql, reservationValues, (err, rows) => {
+        if (err) {
+          console.error('Erreur lors de la récupération des rendez-vous :', err);
+          return res.status(500).json({ error: 'Erreur interne du serveur' });
+        }
+
+        // Récupération des rendez-vous réussie
+        res.status(200).json({ success: true, rendezvous: rows });
+      });
+    });
+  } catch (error) {
+    console.error('Erreur dans la route /listeresa :', error);
+    return res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
 });
+
+
+
 
 // Route pour charger les dates indisponibles pour un véhicule
 app.get('/datesIndisponibles', (req, res) => {
@@ -273,8 +298,6 @@ app.get('/datesIndisponibles', (req, res) => {
     });
   });
 });
-
-
 
 
 // Route pour la réservation
