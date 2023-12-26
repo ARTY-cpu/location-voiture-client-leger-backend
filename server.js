@@ -297,7 +297,7 @@ app.get('/datesIndisponibles', (req, res) => {
     const getDatesIndisponibles = `
       SELECT date_reservation_1 AS start, date_reservation_2 AS end
       FROM rdv
-      WHERE voiture_id = ?;
+      WHERE voiture_id = ? and statut = 'En attente';
     `;
 
     db.all(getDatesIndisponibles, [vehiculeId], (err, rows) => {
@@ -375,6 +375,29 @@ app.post('/reservations', verifyToken, (req, res) => {
         res.status(200).json({ success: true });
       });
     });
+  });
+});
+
+
+//Route pour supprimer une réservation
+app.put('/annuler-reservation/:id', verifyToken, (req, res) => {
+  const reservationId = req.params.id;
+
+  // Votre logique pour mettre à jour le statut de la réservation dans la base de données
+  const updateReservationSql = 'UPDATE rdv SET statut = ? WHERE id = ?';
+
+  db.run(updateReservationSql, ['Annulée', reservationId], function (err) {
+    if (err) {
+      console.error('Erreur lors de la mise à jour du statut de la réservation :', err);
+      return res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+
+    // Vérifiez si une ligne a été affectée, indiquant que la réservation a été mise à jour
+    if (this.changes > 0) {
+      res.status(200).json({ success: true, message: 'Statut de la réservation mis à jour avec succès' });
+    } else {
+      res.status(404).json({ error: 'Réservation non trouvée' });
+    }
   });
 });
 
