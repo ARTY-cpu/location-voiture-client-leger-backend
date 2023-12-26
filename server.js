@@ -216,6 +216,20 @@ app.get('/modeles', (req, res) => {
   });
 });
 
+// Route pour charger les véhicules
+app.get('/vehicules', (req, res) => {
+  const { modele } = req.query; // Utilisez req.query pour récupérer le modèle depuis la requête
+  const sql = 'SELECT * FROM voitures where categorie_id = ?';
+  const values = [modele];
+  db.all(sql, values, (err, rows) => {
+    if (err) {
+      console.error('Erreur lors du chargement des véhicules :', err);
+      res.status(500).json({ error: 'Erreur interne du serveur' });
+    } else {
+      res.status(200).json(rows);
+    }
+  });
+});
 
 // Route pour charger les rdv
 app.get('/listeresa', verifyToken, (req, res) => {
@@ -236,8 +250,12 @@ app.get('/listeresa', verifyToken, (req, res) => {
 
       const clientId = row.id;
 
-      // Sélectionner les rendez-vous en attente pour le client
-      const listereservationSql = 'SELECT * FROM rdv WHERE client_id = ? AND statut = ?';
+      // Sélectionner véhicules du client en cours
+      const listereservationSql = `
+      SELECT rdv.id, categorie, marque || ' ' || modele AS voiture, plaque_immatriculation , date_reservation_1, date_reservation_2 FROM rdv 
+      LEFT JOIN voitures on rdv.voiture_id = voitures.id
+      LEFT JOIN categories on categorie_id = categories.ID 
+      WHERE client_id = ? AND statut = ?;`
       const reservationValues = [clientId, 'En attente'];
 
       db.all(listereservationSql, reservationValues, (err, rows) => {
