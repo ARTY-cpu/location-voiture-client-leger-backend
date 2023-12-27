@@ -342,7 +342,7 @@ app.post('/reservations', verifyToken, (req, res) => {
     const checkDisponibilite = `
     SELECT COUNT(*) AS count
     FROM rdv
-    WHERE voiture_id = ? AND (
+    WHERE voiture_id = ? AND statut = 'En attente' AND (
       (date_reservation_1 BETWEEN ? AND ?) OR
       (date_reservation_2 BETWEEN ? AND ?) OR
       (date_reservation_1 <= ? AND date_reservation_2 >= ?)
