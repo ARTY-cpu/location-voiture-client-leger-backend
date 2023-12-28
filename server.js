@@ -252,7 +252,7 @@ app.get('/listeresa', verifyToken, (req, res) => {
 
       // Sélectionner véhicules du client en cours
       const listereservationSql = `
-      SELECT rdv.id, categorie, marque || ' ' || modele AS voiture, plaque_immatriculation , date_reservation_1, date_reservation_2 FROM rdv 
+      SELECT rdv.id, categorie, voitures.id AS voiture_id, categories.ID AS categorie_id, marque || ' ' || modele AS voiture, plaque_immatriculation , date_reservation_1, date_reservation_2 FROM rdv 
       LEFT JOIN voitures on rdv.voiture_id = voitures.id
       LEFT JOIN categories on categorie_id = categories.ID 
       WHERE client_id = ? AND statut = ?;`
