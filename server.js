@@ -297,7 +297,7 @@ app.get('/datesIndisponibles', (req, res) => {
     const getDatesIndisponibles = `
       SELECT date_reservation_1 AS start, date_reservation_2 AS end
       FROM rdv
-      WHERE voiture_id = ? and statut = 'En attente';
+      WHERE voiture_id = ? and (statut IN ('En attente', 'En cours'));
     `;
 
     db.all(getDatesIndisponibles, [vehiculeId], (err, rows) => {
@@ -342,7 +342,7 @@ app.post('/reservations', verifyToken, (req, res) => {
     const checkDisponibilite = `
     SELECT COUNT(*) AS count
     FROM rdv
-    WHERE voiture_id = ? AND statut = 'En attente' AND (
+    WHERE voiture_id = ? AND (statut IN ('En attente', 'En cours')) AND (
       (date_reservation_1 BETWEEN ? AND ?) OR
       (date_reservation_2 BETWEEN ? AND ?) OR
       (date_reservation_1 <= ? AND date_reservation_2 >= ?)
@@ -371,8 +371,25 @@ app.post('/reservations', verifyToken, (req, res) => {
           return res.status(500).json({ error: 'Erreur interne du serveur' });
         }
 
-        // Réservation réussie
-        res.status(200).json({ success: true });
+        // Après chaque insertion, mettre à jour tous les statuts
+        const updateAllStatusSql = `
+        UPDATE rdv
+        SET statut = 
+          CASE
+            WHEN statut IN ('En attente', 'En cours') AND datetime('now') >= date_reservation_2 THEN 'Terminée'
+            WHEN statut = 'En attente' AND datetime('now') BETWEEN date_reservation_1 AND date_reservation_2 THEN 'En cours'
+            ELSE 'En attente'
+          END
+          WHERE statut != 'Annulée';  -- Exclure les rendez-vous avec le statut "Annulée"
+      `;
+        db.run(updateAllStatusSql, [], (err) => {
+          if (err) {
+            console.error('Erreur lors de la mise à jour de tous les statuts :', err);
+            return res.status(500).json({ error: 'Erreur interne du serveur' });
+          }
+          // Réservation réussie
+          res.status(200).json({ success: true });
+        });
       });
     });
   });
