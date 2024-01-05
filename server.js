@@ -274,7 +274,55 @@ app.get('/listeresa', verifyToken, (req, res) => {
   }
 });
 
+// Route pour la modification du rendez-vous
+app.put('/modifier-rendezvous/:id', verifyToken, (req, res) => {
+  const rendezVousId = req.params.id;
+  const { date_reservation_1, date_reservation_2, voiture_id } = req.body;
 
+  // Vérifiez si la date de fin est supérieure ou égale à la date de début
+  if (new Date(date_reservation_2) < new Date(date_reservation_1)) {
+    return res.status(400).json({ error: "La date de fin doit être supérieure ou égale à la date de début." });
+  }
+
+  // Implémentez la logique pour la modification du rendez-vous dans la base de données
+  const updateRendezVousSql = `
+    UPDATE rdv
+    SET date_reservation_1 = ?,
+        date_reservation_2 = ?,
+        voiture_id = ?
+    WHERE id = ?;
+  `;
+  const updateRendezVousValues = [date_reservation_1, date_reservation_2, voiture_id , rendezVousId];
+
+  db.run(updateRendezVousSql, updateRendezVousValues, (err) => {
+    if (err) {
+      console.error('Erreur lors de la modification du rendez-vous dans la base de données :', err);
+      return res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+
+    // Mettez à jour tous les statuts après la modification
+    const updateAllStatusSql = `
+      UPDATE rdv
+      SET statut = 
+        CASE
+          WHEN statut IN ('En attente', 'En cours') AND datetime('now') >= date_reservation_2 THEN 'Terminée'
+          WHEN statut = 'En attente' AND datetime('now') BETWEEN date_reservation_1 AND date_reservation_2 THEN 'En cours'
+          ELSE 'En attente'
+        END
+      WHERE statut != 'Annulée';  -- Exclure les rendez-vous avec le statut "Annulée"
+    `;
+
+    db.run(updateAllStatusSql, [], (err) => {
+      if (err) {
+        console.error('Erreur lors de la mise à jour de tous les statuts :', err);
+        return res.status(500).json({ error: 'Erreur interne du serveur' });
+      }
+
+      // Renvoyez une réponse indiquant que la modification a réussi
+      res.status(200).json({ success: true });
+    });
+  });
+});
 
 
 // Route pour charger les dates indisponibles pour un véhicule
