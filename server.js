@@ -57,7 +57,7 @@ app.post('/contact', (req, res) => {
 app.post('/inscription', (req, res) => {
   const { nom, prenom, adresse, codePostal, ville, telephone, email, mdp } = req.body;
 
-  // Logique de hachage du mot de passe ici
+  // Logique de hachage du mot de passe ici si besoin
 
   // Utiliser une requête préparée pour insérer les données dans la base de données
   const sql = 'INSERT INTO utilisateurs (nom, prenom, adresse, code_postal, ville, telephone, email, mdp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
@@ -159,7 +159,7 @@ app.get('/user', verifyToken, (req, res) => {
   });
 });
 
-// Update user data endpoint
+// maj profil utilisateur
 app.put('/user', verifyToken, (req, res) => {
   const { email } = req.user;
   const { nom, prenom, adresse, codePostal, ville, telephone, mdp } = req.body;
@@ -171,7 +171,7 @@ app.put('/user', verifyToken, (req, res) => {
   `;
   const values = [nom, prenom, adresse, codePostal, ville, telephone, mdp, email];
 
-  // Using a prepared statement
+  // requete preparee
   db.run(sql, values, (err) => {
     if (err) {
       console.error('Erreur lors de la modification des données de l\'utilisateur :', err);
@@ -218,7 +218,7 @@ app.get('/modeles', (req, res) => {
 
 // Route pour charger les véhicules
 app.get('/vehicules', (req, res) => {
-  const { modele } = req.query; // Utilisez req.query pour récupérer le modèle depuis la requête
+  const { modele } = req.query; //req.query modèle depuis la requête
   const sql = 'SELECT * FROM voitures where categorie_id = ?';
   const values = [modele];
   db.all(sql, values, (err, rows) => {
@@ -279,12 +279,12 @@ app.put('/modifier-rendezvous/:id', verifyToken, (req, res) => {
   const rendezVousId = req.params.id;
   const { date_reservation_1, date_reservation_2, voiture_id } = req.body;
 
-  // Vérifiez si la date de fin est supérieure ou égale à la date de début
+  // Vérif si la date de fin est supérieure ou égale à la date de début
   if (new Date(date_reservation_2) < new Date(date_reservation_1)) {
     return res.status(400).json({ error: "La date de fin doit être supérieure ou égale à la date de début." });
   }
 
-  // Implémentez la logique pour la modification du rendez-vous dans la base de données
+  // logique pour la modification du rendez-vous dans la base de données
   const updateRendezVousSql = `
     UPDATE rdv
     SET date_reservation_1 = ?,
@@ -292,7 +292,7 @@ app.put('/modifier-rendezvous/:id', verifyToken, (req, res) => {
         voiture_id = ?
     WHERE id = ?;
   `;
-  const updateRendezVousValues = [date_reservation_1, date_reservation_2, voiture_id , rendezVousId];
+  const updateRendezVousValues = [date_reservation_1, date_reservation_2, voiture_id, rendezVousId];
 
   db.run(updateRendezVousSql, updateRendezVousValues, (err) => {
     if (err) {
@@ -300,7 +300,7 @@ app.put('/modifier-rendezvous/:id', verifyToken, (req, res) => {
       return res.status(500).json({ error: 'Erreur interne du serveur' });
     }
 
-    // Mettez à jour tous les statuts après la modification
+    // Maj tous les statuts après la modification
     const updateAllStatusSql = `
       UPDATE rdv
       SET statut = 
@@ -318,7 +318,7 @@ app.put('/modifier-rendezvous/:id', verifyToken, (req, res) => {
         return res.status(500).json({ error: 'Erreur interne du serveur' });
       }
 
-      // Renvoyez une réponse indiquant que la modification a réussi
+      // renvoyer une réponse indiquant que la modification a réussi
       res.status(200).json({ success: true });
     });
   });
@@ -329,7 +329,7 @@ app.put('/modifier-rendezvous/:id', verifyToken, (req, res) => {
 app.get('/datesIndisponibles', (req, res) => {
   const { vehiculeId } = req.query;
 
-  // Vérifiez si le véhicule existe
+  // Vérif si le véhicule existe
   const checkVehiculeExistence = 'SELECT id FROM voitures WHERE id = ?';
   db.get(checkVehiculeExistence, [vehiculeId], (err, vehiculeRow) => {
     if (err) {
@@ -341,7 +341,7 @@ app.get('/datesIndisponibles', (req, res) => {
       return res.status(404).json({ error: 'Véhicule non trouvé' });
     }
 
-    // Vérifiez les dates indisponibles pour le véhicule spécifié
+    // Vérif les dates indisponibles pour le véhicule spécifié
     const getDatesIndisponibles = `
       SELECT date_reservation_1 AS start, date_reservation_2 AS end
       FROM rdv
@@ -448,7 +448,7 @@ app.post('/reservations', verifyToken, (req, res) => {
 app.put('/annuler-reservation/:id', verifyToken, (req, res) => {
   const reservationId = req.params.id;
 
-  // Votre logique pour mettre à jour le statut de la réservation dans la base de données
+  // logique pour maj le statut de la réservation dans la base de données
   const updateReservationSql = 'UPDATE rdv SET statut = ? WHERE id = ?';
 
   db.run(updateReservationSql, ['Annulée', reservationId], function (err) {
