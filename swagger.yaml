@@ -1,0 +1,2571 @@
+openapi: 3.0.3
+info:
+  title: ISEE API
+  description: |-
+    Our project is an innovative video platform that allows users from all over the world to create, share and discover compelling content.
+    With advanced features such as profile customization, video streaming, live chat functionality and a robust server architecture, our platform offers a high quality user experience.
+    Join us now and dive into the exciting world of online video!
+
+    Certain actions that lead to modifications to data relating to a user other than oneself require additional security on the part of the administrator or moderator.
+    It is therefore necessary to log in as an administrator or moderator to carry out these actions and to specify in the header in the "usermodification" field the id of the user concerned.
+    
+    Some useful links:
+    - [The ISEE repository](https://github.com/estebanmathia/4DESA)
+    - [The source API definition for the ISEE API](https://github.com/estebanmathia/4DESA)
+  contact:
+    email: ateliertechniquededev@gmail.com
+  version: 1.6.24
+servers:
+  - url: https://localhost:3000
+    description: Local server
+  - url: https://isee.com/api
+    description: url public
+externalDocs:
+  description: Find out more about ISEE API
+  url: https://github.com/estebanmathia/4DESA/blob/main/README.md
+tags:
+  - name: Authentication
+    description: Operations about authentication
+  - name: Subscription
+    description: Operations about subscription
+  - name: User
+    description: Operations about user
+  - name: Video
+    description: Operations about video
+  - name: Chapters
+    description: Operations about chapters in a video
+  - name: Tags
+    description: Operations about tags in a video
+  - name: Comment
+    description: Operations about comments in a video
+  - name: Opinions
+    description: Operations about Like and Dislike in a video
+  - name: View
+    description: Operations about views done by users
+  - name: Graphical
+    description: Operations relating to monitoring data on the evolution of the platform
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Get a token
+      description: Get a token to access the API with your identifier, password and code OTP (One Time Password) provided by your email
+      operationId: Login
+      requestBody:
+        description: Login with your identifier, password and code OTP (One Time Password) provided by your email. The code is valid for 20 minutes and is send when you try to login a first time.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                pwd:
+                  type: string
+                  pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{10,20}$/
+                OTP:
+                  type: string
+                  pattern: /^[0-9]{6}$/
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Login'
+        '400':
+          description: Invalid element value
+  /auth/reLogin:
+    post:
+      tags:
+        - Authentication
+      summary: Get a token
+      description: Get a token to access the API with your identifier, password and previous token
+      operationId: Relogin
+      parameters:
+        - name: Authorization
+          in: header
+          description: Previous token to access the API
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: Login with your identifier, password and previous token
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                pwd:
+                  type: string
+                  pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{10,20}$/
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Login'
+        '400':
+          description: Invalid element value
+  /auth/resendOTP:
+    post:
+      tags:
+        - Authentication
+      summary: Resend a code OTP
+      description: Resend a code OTP (One Time Password) provided by your email
+      operationId: ResendOTP
+      requestBody:
+        description: Resend a code OTP (One Time Password) provided by your email
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                pwd:
+                  type: string
+                  pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{10,20}$/
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: boolean
+                    description: return a boolean to know if the email is send
+        '400':
+          description: Invalid element value
+        '401':
+          description: Unauthorized
+          $ref: '#/components/responses/UnauthorizedError'
+      security:
+        - JWTAuth: []
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Register a new user with your identifier, password and pseudo
+      operationId: Register
+      requestBody:
+        description: Register a new user with your identifier, password and pseudo. The new account have 20mins to confirm his email with a link send in an email.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                pwd:
+                  type: string
+                  pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{10,20}$/
+                pseudo:
+                  type: string
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Login'
+        '400':
+          description: Invalid element value
+  /auth/OTP:
+    get:
+      tags:
+        - Authentication
+      summary: Get a code OTP
+      description: Get a code OTP (One Time Password) provided by your email
+      operationId: OTP
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  OTP:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: /^[0-9]{6}$/
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+        '401':
+          description: Unauthorized
+          $ref: '#/components/responses/UnauthorizedError'
+      security:
+        - JWTAuth: []
+  /auth/confirm:
+    get:
+      tags:
+        - Authentication
+      summary: Confirm your email
+      description: Confirm your email with a code send by email
+      operationId: Confirm
+      parameters:
+        - name: code
+          in: query
+          description: Code send by email
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Successful operation and redirect to the home page of the website
+        '400':
+          description: Invalid element value
+        '404':
+          description: Website not found
+  /sub/unFollow/{id}:
+    delete:
+      tags:
+        - Subscription
+      summary: Unfollow a user
+      description: Unfollow a user with his id
+      operationId: Unfollow
+      parameters:
+        - name: id
+          in: path
+          description: Id of the user to unfollow
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: boolean
+                    description: return a boolean to know if the user is unfollow
+        '400':
+          description: Invalid element value
+        '401':
+          description: Unauthorized
+          $ref: '#/components/responses/UnauthorizedError'
+      security:
+        - JWTAuth: []
+  /sub/follow/{id}:
+    post:
+      tags:
+        - Subscription
+      summary: Follow a user
+      description: Follow a user with his id
+      operationId: Follow
+      parameters:
+        - name: id
+          in: path
+          description: Id of the user to follow
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: boolean
+                    description: return a boolean to know if the user is follow
+        '400':
+          description: Invalid element value
+        '401':
+          description: Unauthorized
+          $ref: '#/components/responses/UnauthorizedError'
+      security:
+        - JWTAuth: []
+  /sub/count:
+    get:
+      tags:
+        - Subscription
+      summary: Count the number of your subscription
+      description: Count the number of your subscription
+      operationId: CountMySubscription
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    format: int64
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+        '401':
+          description: Unauthorized
+          $ref: '#/components/responses/UnauthorizedError'
+      security:
+        - JWTAuth: []
+  /sub/count/{id}:
+    get:
+      tags:
+        - Subscription
+      summary: Count the number of follower of a user
+      description: Count the number of follower of a user with his id
+      operationId: CountSubscription
+      parameters:
+        - name: id
+          in: path
+          description: Id of the user to count his follower
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    format: int64
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+  /sub:
+    get:
+      tags:
+        - Subscription
+      summary: Get all your subscription
+      description: Get all your subscription
+      operationId: GetMySubscription
+      parameters:
+        - $ref: '#/components/parameters/Pagination'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      format: int64
+                      description: Id of the subscription
+                    idSubscription:
+                      type: integer
+                      format: int64
+                      description: Id of the user you follow
+                    pseudoSubscription:
+                      type: string
+                      description: Pseudo of the user you follow
+                    descriptionSubscription:
+                      type: string
+                      description: Description of the user you follow
+                    ppSubscription:
+                      type: string
+                      format: base64
+                      description: Profile picture of the user you follow
+                    create_at:
+                      type: string
+                      format: date-time
+                      description: Date of the subscription
+                    totalSubscription:
+                      type: integer
+                      format: int64
+                      description: Total of the user you follow
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+        '401':
+          description: Unauthorized
+          $ref: '#/components/responses/UnauthorizedError'
+      security:
+        - JWTAuth: []
+  /sub/{follow}:
+    get:
+      tags:
+        - Subscription
+      summary: Get detail of one subscription by user id
+      description: Get detail of one subscription by user id
+      operationId: GetSubscription
+      parameters:
+        - name: follow
+          in: path
+          description: Id of the user you want to get the subscription
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+                    description: Id of the subscription
+                  idSubscription:
+                    type: integer
+                    format: int64
+                    description: Id of the user you follow
+                  pseudoSubscription:
+                    type: string
+                    description: Pseudo of the user you follow
+                  descriptionSubscription:
+                    type: string
+                    description: Description of the user you follow
+                  ppSubscription:
+                    type: string
+                    format: base64
+                    description: Profile picture of the user you follow
+                  create_at:
+                    type: string
+                    format: date-time
+                    description: Date of the subscription
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+        '401':
+          description: Unauthorized
+          $ref: '#/components/responses/UnauthorizedError'
+      security:
+        - JWTAuth: []
+  /sub/search:
+    get:
+      tags:
+        - Subscription
+      summary: Search a user by his pseudo into your subscription
+      description: Search a user by his pseudo into your subscription
+      operationId: SearchSubscription
+      parameters:
+        - name: search
+          in: query
+          description: Name of the user you want to search
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      format: int64
+                      description: Id of the subscription
+                    idSubscription:
+                      type: integer
+                      format: int64
+                      description: Id of the user you follow
+                    pseudoSubscription:
+                      type: string
+                      description: Pseudo of the user you follow
+                    descriptionSubscription:
+                      type: string
+                      description: Description of the user you follow
+                    ppSubscription:
+                      type: string
+                      format: base64
+                      description: Profile picture of the user you follow
+                    create_at:
+                      type: string
+                      format: date-time
+                      description: Date of the subscription
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+        '401':
+          description: Unauthorized
+          $ref: '#/components/responses/UnauthorizedError'
+      security:
+        - JWTAuth: []
+  /videos/search:
+    get:
+      tags:
+        - Video
+      summary: Search videos
+      description: Search videos by title or description
+      operationId: SearchVideos
+      parameters:
+        - name: search
+          in: query
+          description: Search value
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Pagination'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Video'
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+  /videos/home:
+    get:
+      tags:
+        - Video
+      summary: Get videos for home page
+      description: Get videos for home page. Videos are sorted aleatory
+      operationId: GetVideosHome
+      parameters:
+        - name: Authorization
+          in: header
+          description: Access token
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Video'
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+  /videos:
+    post:
+      tags: 
+        - Video
+      summary: Create a video
+      description: Create a video with title, description, video and thumbnail. You can also specify a if the video is private or not and if it uses a public live chat. Later you can add tags and chapters to your video
+      operationId: CreateVideo
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: Title of the video
+                description:
+                  type: string
+                  description: Description of the video
+                video:
+                  type: string
+                  format: binary
+                  description: Video file
+                miniature:
+                  type: string
+                  format: base64
+                  description: Thumbnail file
+                public:
+                  type: boolean
+                  description: If the video is public or not
+                live_chat:
+                  type: boolean
+                  description: If the video uses a public live chat or not
+              required:
+                - title
+                - description
+                - video
+                - miniature
+                - public
+                - live_chat
+      responses:
+        '201':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Unauthorized
+          $ref: '#/components/responses/UnauthorizedError'
+      security:
+        - JWTAuth: []
+    get:
+      tags:
+        - Video
+      summary: Get some videos by Id
+      description: Get some videos by Id
+      operationId: GetVideos
+      parameters:
+        - name: idVideos
+          in: query
+          description: Id of the videos you want to get
+          required: true
+          schema:
+            type: array
+            items:
+              type: integer
+              format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Video'
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+  /videos/{idVideo}:
+    patch:
+      tags:
+        - Video
+      summary: Update a video
+      description: Update a video by his id. You can update title, description, video, thumbnail, public and live chat
+      operationId: UpdateVideo
+      parameters:
+        - name: idVideo
+          in: path
+          description: Id of the video you want to update
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: Title of the video
+                description:
+                  type: string
+                  description: Description of the video
+                miniature:
+                  type: string
+                  format: base64
+                public:
+                  type: boolean
+                  description: If the video is public or not
+                live_chat:
+                  type: boolean
+                  description: If the video uses a public live chat or not
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Unauthorized
+          $ref: '#/components/responses/UnauthorizedError'
+      security:
+        - JWTAuth: []
+    delete:
+      tags:
+        - Video
+      summary: Delete a video
+      description: Delete a video by his id
+      operationId: DeleteVideo
+      parameters:
+        - name: idVideo
+          in: path
+          description: Id of the video you want to delete
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Unauthorized
+          $ref: '#/components/responses/UnauthorizedError'
+      security:
+        - JWTAuth: []
+  /videos/public:
+    post:
+      tags:
+        - Video
+      summary: set a video public or private
+      description: set a video public or private
+      operationId: SetPublicVideos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isPublic:
+                  type: boolean
+                  description: If the video is public or not
+                idVideo:
+                  type: integer
+                  format: int64
+                  description: Id of the video you want to set public or private
+              required:
+                - isPublic
+                - idVideo
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Unauthorized
+          $ref: '#/components/responses/UnauthorizedError'
+      security:
+        - JWTAuth: []
+  /videos/channel/{id}:
+    get:
+      tags:
+        - Video
+      summary: Get all videos of a channel
+      description: Get all videos of a channel
+      operationId: GetVideosChannel
+      parameters:
+        - name: id
+          in: path
+          description: Id of the channel you want to get videos
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/Pagination'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Video'
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+  /videos/{id}:
+    get:
+      tags:
+        - Video
+      summary: Get a video by Id
+      description: Get a video by Id
+      operationId: GetVideo
+      parameters:
+        - name: id
+          in: path
+          description: Id of the video you want to get
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Video'
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+  /videos/search/tags:
+    get:
+      tags:
+        - Video
+      summary: Get all videos with a tag
+      description: Get all videos with a tag
+      operationId: GetVideosByTag
+      parameters:
+        - name: tag
+          in: query
+          description: Tag you want to search
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+        - $ref: '#/components/parameters/Pagination'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Video'
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+  /videos/watch/{codeVideo}:
+    get:
+      tags:
+        - Video
+      summary: Get part of a video by his code (streaming)
+      description: Get part of a video by his code (streaming)
+      operationId: GetVideoByCode
+      parameters:
+        - name: codeVideo
+          in: path
+          description: Code of the video you want to get
+          required: true
+          schema:
+            type: string
+        - name: range
+          in: header
+          description: Range of the video you want to get
+          required: false
+          schema:
+            type: string
+        - name: viewer
+          in: query
+          description: Access token
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: content of the video
+        '204':
+          description: No data
+        '206':
+          description: Partial content of the video
+        '400':
+          description: Invalid element value
+  /videos/watchImage/{codeVideo}:
+    get:
+      tags:
+        - Video
+      summary: Get part of a Photo by his code (streaming)
+      description: Get part of a Photo by his code (streaming)
+      operationId: GetPhotoByCode
+      parameters:
+        - name: codeVideo
+          in: path
+          description: Code of the photo you want to get
+          required: true
+          schema:
+            type: string
+        - name: viewer
+          in: query
+          description: Access token
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: content of the video
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+  /videos/read/{codeVideo}:
+    get:
+      tags:
+        - Video
+      summary: Get subTitles of a video by his code
+      description: Get subTitles of a video by his code
+      operationId: GetSubTitlesByCode
+      parameters:
+        - name: codeVideo
+          in: path
+          description: Code of the video you want to get
+          required: true
+          schema:
+            type: string
+        - name: lang
+          in: query
+          description: Lang of the subTitles you want to get
+          required: false
+          schema:
+            type: string
+            pattern: /^[a-z]{2}-[A-Z]{2}$/
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            text/vtt:
+              schema:
+                type: string
+        '400':
+          description: Invalid element value
+  /videos/read/{idVideo}:
+    post:
+      tags:
+        - Video
+      summary: Add subTitles to a video
+      description: Add subTitles to a video
+      operationId: AddSubTitles
+      parameters:
+        - name: idVideo
+          in: path
+          description: Id of the video you want to add subTitles
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        description: Add subTitles to a video
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lang:
+                  type: string
+                  pattern: /^[a-z]{2}-[A-Z]{2}$/
+                subTitles:
+                  type: string
+                  format: text/vtt
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+  /videos/read/{idVideo}/{lang}:
+    delete:
+      tags:
+        - Video
+      summary: Delete subTitles of a video
+      description: Delete subTitles of a video
+      operationId: DeleteSubTitles
+      parameters:
+        - name: idVideo
+          in: path
+          description: Id of the video you want to delete subTitles
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: lang
+          in: path
+          description: Lang of the subTitles you want to delete
+          required: true
+          schema:
+            type: string
+            pattern: /^[a-z]{2}-[A-Z]{2}$/
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+  /users/search:
+    get:
+      tags:
+        - User
+      summary: Get all users with a pseudo or description
+      description: Get all users with a pseudo or description
+      operationId: GetUsersByName
+      parameters:
+        - name: search
+          in: query
+          description: Name of the user you want to search
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Pagination'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserLight'
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+  /users/lock:
+    get:
+      tags:
+        - User
+      summary: Lock or unlock a user
+      description: Lock or unlock a user by a code
+      operationId: LockUser
+      parameters:
+        - name: code
+          in: query
+          description: Code of the user you want to lock or unlock
+          required: true
+          schema:
+            type: string
+        - name: lock
+          in: query
+          description: True if you want to lock the user, false if you want to unlock him
+          required: true
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '301':
+          description: after this request, you will be redirected to the website
+        '400':
+          description: Invalid element value
+  /users:
+    patch:
+      tags:
+        - User
+      summary: Update a user
+      description: Update a user
+      operationId: UpdateUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                pseudo:
+                  type: string
+                description:
+                  type: string
+                profile_picture:
+                  type: string
+                  format: base64
+                email:
+                  type: string
+                password:
+                  type: string
+                  pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{10,20}$/
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+    delete:
+      tags:
+        - User
+      summary: Delete a user
+      description: Delete a user
+      operationId: DeleteUser
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+    get:
+      tags:
+        - User
+      summary: Get data from my account
+      description: Get data from my account
+      operationId: GetMyAccount
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserFull'
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+  /users/{id}:
+    get:
+      tags:
+        - User
+      summary: Get a user by his id
+      description: Get a user by his id
+      operationId: GetUserById
+      parameters:
+        - name: id
+          in: path
+          description: Id of the user you want to get
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserLight'
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+  /chap/{id}:
+    get:
+      tags:
+        - Chapters
+      summary: Get chapter of a video by his id
+      description: Get chapter of a video by his id
+      operationId: GetChapById
+      parameters:
+        - name: id
+          in: path
+          description: Id of the video you want to get chapters
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chapters'
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+    post:
+      tags:
+        - Chapters
+      summary: Create a chapter
+      description: Create a chapter for a video
+      operationId: CreateChap
+      parameters:
+        - name: id
+          in: path
+          description: Id of the video you want to create a chapter
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                title:
+                  type: string
+                timecode:
+                  type: string
+              required:
+                - title
+                - timecode
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+    delete:
+      tags:
+        - Chapters
+      summary: Delete all chapters of a video
+      description: Delete all chapters of a video
+      operationId: DeleteChaps
+      parameters:
+        - name: id
+          in: path
+          description: Id of the video you want to delete chapters
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+  /chaps/{id}/{chapId}:
+    patch:
+      tags:
+        - Chapters
+      summary: Update a chapter
+      description: Update a chapter
+      operationId: UpdateChap
+      parameters:
+        - name: id
+          in: path
+          description: Id of the video you want to update a chapter
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: chapId
+          in: path
+          description: Id of the chapter you want to update
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                title:
+                  type: string
+                timecode:
+                  type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+    delete:
+      tags:
+        - Chapters
+      summary: Delete a chapter
+      description: Delete a chapter
+      operationId: DeleteChap
+      parameters:
+        - name: id
+          in: path
+          description: Id of the video you want to delete a chapter
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: chapId
+          in: path
+          description: Id of the chapter you want to delete
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+  /tags/{id}:
+    get:
+      tags:
+        - Tags
+      summary: Get tags of a video by his id
+      description: Get tags of a video by his id
+      operationId: GetTagsById
+      parameters:
+        - name: id
+          in: path
+          description: Id of the video you want to get tags
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+    post:
+      tags:
+        - Tags
+      summary: Create a tag
+      description: Create a tag for a video
+      operationId: CreateTag
+      parameters:
+        - name: id
+          in: path
+          description: Id of the video you want to create a tag
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                tags:
+                  type: array
+                  items:
+                    type: string
+              required:
+                - tags
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+    delete:
+      tags:
+        - Tags
+      summary: Delete all tags of a video
+      description: Delete all tags of a video
+      operationId: DeleteTags
+      parameters:
+        - name: id
+          in: path
+          description: Id of the video you want to delete tags
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+  /tags/{id}/{tag}:
+    delete:
+      tags:
+        - Tags
+      summary: Delete a tag
+      description: Delete a tag
+      operationId: DeleteTag
+      parameters:
+        - name: id
+          in: path
+          description: Id of the video you want to delete a tag
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: tag
+          in: path
+          description: Tag you want to delete
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+  /opinions:
+    get:
+      tags:
+        - Opinions
+      summary: Get all of your opinions
+      description: Get all of your opinions
+      operationId: GetOpinions
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 1
+        - name: itemPerPage
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 10
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIResponse'
+        '204':
+          description: No data
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+    post:
+      tags:
+        - Opinions
+      summary: Create an opinion
+      description: Create an opinion
+      operationId: CreateOpinion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                idVideo:
+                  type: integer
+                  format: int64
+                opinion:
+                  type: boolean
+              required:
+                - idVideo
+                - opinion
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+  /opinions/{id}:
+    patch:
+      tags:
+        - Opinions
+      summary: Update an opinion
+      description: Update an opinion
+      operationId: UpdateOpinion
+      parameters:
+        - name: id
+          in: path
+          description: Id of the opinion you want to update
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                opinion:
+                  type: boolean
+              required:
+                - opinion
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+    get:
+      tags:
+        - Opinions
+      summary: Get an opinion by his id
+      description: Get an opinion by his id
+      operationId: GetOpinion
+      parameters:
+        - name: id
+          in: path
+          description: Id of the opinion you want to get
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Opinion'
+        '204':
+          description: No data
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+    delete:
+      tags:
+        - Opinions
+      summary: Delete an opinion
+      description: Delete an opinion
+      operationId: DeleteOpinion
+      parameters:
+        - name: id
+          in: path
+          description: Id of the opinion you want to delete
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+  /opinions/count/{id}:
+    get:
+      tags:
+        - Opinions
+      summary: Get the number of opinions of a video
+      description: Get the number of opinions of a video
+      operationId: GetOpinionsCount
+      parameters:
+        - name: id
+          in: path
+          description: Id of the video you want to get the number of opinions
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  like:
+                    type: integer
+                    format: int32
+                  dislike:
+                    type: integer
+                    format: int32
+        '204':
+          description: No data => it's mean that the video have no opinions
+  /comments/{id}:
+    get:
+      tags:
+        - Comment
+      summary: Get one comment by his id
+      description: Get one comment by his id
+      operationId: GetComment
+      parameters:
+        - name: id
+          in: path
+          description: Id of the comment you want to get
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '204':
+          description: No data
+    patch:
+      tags:
+        - Comment
+      summary: Update a comment
+      description: Update a comment
+      operationId: UpdateComment
+      parameters:
+        - name: id
+          in: path
+          description: Id of the comment you want to update
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                content:
+                  type: string
+                responds:
+                  type: integer
+                  format: int64
+                emoji:
+                  type: string
+                  description: Emoji unicode
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+    delete:
+      tags:
+        - Comment
+      summary: Delete a comment
+      description: Delete a comment
+      operationId: DeleteComment
+      parameters:
+        - name: id
+          in: path
+          description: Id of the comment you want to delete
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+    post:
+      tags:
+        - Comment
+      summary: Create a comment
+      description: Create a comment
+      operationId: CreateComment
+      parameters:
+        - name: id
+          in: path
+          description: Id of the comment you want to update
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                content:
+                  type: string
+                responds:
+                  type: integer
+                  format: int64
+                emoji:
+                  type: string
+                  description: Emoji unicode
+      responses:
+        '201':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+  /comments/video/{id}:
+    get:
+      tags:
+        - Comment
+      summary: Get all comments of a video
+      description: Get all comments of a video
+      operationId: GetComments
+      parameters:
+        - name: id
+          in: path
+          description: Id of the video you want to get the comments
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 1
+        - name: itemPerPage
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 10
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+  /comments/responds/{id}:
+    get:
+      tags:
+        - Comment
+      summary: Get all responds of a comment
+      description: Get all responds of a comment
+      operationId: GetResponds
+      parameters:
+        - name: id
+          in: path
+          description: Id of the comment you want to get the responds
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 1
+        - name: itemPerPage
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 10
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+  /comments/count/{id}:
+    get:
+      tags:
+        - Comment
+      summary: Get the number of comments of a video
+      description: Get the number of comments of a video
+      operationId: GetCommentsCount
+      parameters:
+        - name: id
+          in: path
+          description: Id of the video you want to get the number of comments
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: integer
+                format: int32
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+  /views:
+    delete:
+      tags:
+        - View
+      summary: Delete all of your views
+      description: Delete all of your views
+      operationId: DeleteMyViews
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+  /views/{id}:
+    get:
+      tags:
+        - View
+      summary: Get a view about a video (only moderator or admin)
+      description: Get a view about a video
+      operationId: GetView
+      parameters:
+        - name: id
+          in: path
+          description: Id of the video you want to get the view
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/View'
+        '204':
+          description: No data
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+  /views/user:
+    get:
+      tags:
+        - View
+      summary: Get all views you have done
+      description: Get all views you have done
+      operationId: GetMyViews
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 1
+        - name: itemPerPage
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 10
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/View'
+        '204':
+          description: No data
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+  /playlists:
+    get:
+      tags:
+        - Playlist
+      summary: Get all of your playlist
+      description: Get all of your playlist
+      operationId: GetPlaylists
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Playlist'
+        '204':
+          description: No data
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+    delete:
+      tags:
+        - Playlist
+      summary: Delete all of your playlist
+      description: Delete all of your playlist
+      operationId: DeletePlaylists
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+  /playlists/{name}:
+    get:
+      tags:
+        - Playlist
+      summary: Get a playlist by his name
+      description: Get a playlist by his name
+      operationId: GetPlaylist
+      parameters:
+        - name: name
+          in: path
+          description: Name of the playlist you want to get
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Playlist'
+        '204':
+          description: No data
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+    delete:
+      tags:
+        - Playlist
+      summary: Delete a playlist
+      description: Delete a playlist
+      operationId: DeletePlaylist
+      parameters:
+        - name: name
+          in: path
+          description: Name of the playlist you want to delete
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+    post:
+      tags:
+        - Playlist
+      summary: Create a playlist
+      description: Create a playlist
+      operationId: CreatePlaylist
+      parameters:
+        - name: name
+          in: path
+          description: Name of the playlist you want to create
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                description:
+                  type: string
+                isPublic:
+                  type: boolean
+              required:
+                - description
+                - isPublic
+      responses:
+        '201':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Playlist'
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+    patch:
+      tags:
+        - Playlist
+      summary: Update a playlist
+      description: Update a playlist
+      operationId: UpdatePlaylist
+      parameters:
+        - name: name
+          in: path
+          description: Name of the playlist you want to update
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                description:
+                  type: string
+                isPublic:
+                  type: boolean
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+  /playlists/{name}/{id}:
+    post:
+      tags:
+        - Playlist
+      summary: Add a video to a playlist
+      description: Add a video to a playlist
+      operationId: AddVideoToPlaylist
+      parameters:
+        - name: name
+          in: path
+          description: Name of the playlist you want to add a video
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          description: Id of the video you want to add to a playlist
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '201':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+    delete:
+      tags:
+        - Playlist
+      summary: Delete a video from a playlist
+      description: Delete a video from a playlist
+      operationId: DeleteVideoFromPlaylist
+      parameters:
+        - name: name
+          in: path
+          description: Name of the playlist you want to delete a video
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          description: Id of the video you want to delete from a playlist
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '201':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400':
+          description: Invalid element value
+        '401':
+          description: Access token is missing or invalid
+      security:
+        - JWTAuth: []
+components:
+  parameters:
+    Pagination:
+      name: page
+      in: query
+      description: Page number
+      required: false
+      schema:
+        type: object
+        properties:
+          page:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 1
+          itemPerPage:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 10
+        required:
+          - page
+          - itemPerPage
+  responses:
+    UnauthorizedError:
+      description: Access token is missing or invalid
+  schemas:
+    APIResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        date:
+          type: string
+          format: date-time
+    View:
+      type: object
+      properties:
+        user:
+          type: integer
+          format: int64
+        timecode:
+          type: integer
+          format: int64
+        view:
+          type: string
+          format: date-time
+        id:
+          type: integer
+          format: int64
+          description: Id of the video
+        author:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+        miniature:
+          type: string
+          format: base64
+        public:
+          type: boolean
+        live_chat:
+          type: boolean
+        time:
+          type: integer
+          format: int64
+          description: Time in seconds
+        code:
+          type: string
+          description: Code to access to the video
+        create_at:
+          type: string
+          format: date-time
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        user:
+          type: integer
+          format: int64
+        video:
+          type: integer
+          format: int64
+        create_at:
+          type: string
+          format: date-time
+        update_at:
+          type: string
+          format: date-time
+        content:
+          type: string
+        responds:
+          type: integer
+          format: int64
+        emoji:
+          type: integer
+          description: string format of unicode
+        userPseudo:
+          type: string
+    Chapters:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        timecode:
+          type: integer
+          format: int64
+        video:
+          type: integer
+          format: int64
+    Login:
+      type: object
+      properties:
+        Token:
+          type: string
+        id:
+          type: integer
+          format: int64
+    OTP:
+      type: object
+      properties:
+        code_string:
+          type: string
+        user:
+          type: integer
+          format: int64
+    Opinion:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        opinion:
+          type: boolean
+        user:
+          type: integer
+          format: int64
+        video:
+          type: integer
+          format: int64
+        create_at:
+          type: string
+          format: date-time
+        update_at:
+          type: string
+          format: date-time
+    Tag:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        content:
+          type: string
+        video:
+          type: integer
+          format: int64
+    UserLight:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        pseudo:
+          type: string
+        description:
+          type: string
+        profile_picture:
+          type: string
+          format: base64
+        create_at:
+          type: string
+          format: date-time
+    UserFull:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+        pseudo:
+          type: string
+        description:
+          type: string
+        profile_picture:
+          type: string
+          format: base64
+        create_at:
+          type: string
+          format: date-time
+        create_by:
+          type: integer
+          format: int64
+        update_at:
+          type: string
+          format: date-time
+        update_by:
+          type: integer
+          format: int64
+        delete_at:
+          type: string
+          format: date-time
+        delete_by:
+          type: integer
+          format: int64
+    Video:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        author:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+        miniature:
+          type: string
+          format: base64
+        path_video:
+          type: string
+        public:
+          type: boolean
+        live_chat:
+          type: boolean
+        time:
+          type: integer
+          format: int64
+          description: Time in seconds
+        size:
+          type: integer
+          format: int64
+          description: Size in bytes
+        views:
+          type: integer
+          format: int64
+        code:
+          type: string
+          description: Code to access to the video
+        create_at:
+          type: string
+          format: date-time
+        quality:
+          type: array
+          items:
+            type: string
+        subTrack:
+          type: array
+          items:
+            type: string
+    VideoPlaylist:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+        live_chat:
+          type: boolean
+        time:
+          type: integer
+          format: int64
+          description: Time in seconds
+        views:
+          type: integer
+          format: int64
+        code:
+          type: string
+          description: Code to access to the video
+        create_at:
+          type: string
+          format: date-time
+    Playlist:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        public:
+          type: boolean
+        create_at:
+          type: string
+          format: date-time
+        user_id:
+          type: integer
+          format: int64
+        pseudo:
+          type: string
+        profile_picture:
+          type: string
+          format: base64
+        user_create_at:
+          type: string
+          format: date-time
+        user_update_at:
+          type: string
+          format: date-time
+        videos:
+          type: array
+          items:
+            $ref: '#/components/schemas/VideoPlaylist'
+  securitySchemes:
+    JWTAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
