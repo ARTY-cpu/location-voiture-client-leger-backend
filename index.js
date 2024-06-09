@@ -307,6 +307,7 @@ app.put('/modifier-rendezvous/:id', verifyToken, (req, res) => {
         CASE
           WHEN statut IN ('En attente', 'En cours') AND datetime('now') >= date_reservation_2 THEN 'Terminée'
           WHEN statut = 'En attente' AND datetime('now') BETWEEN date_reservation_1 AND date_reservation_2 THEN 'En cours'
+          ELSE 'En attente'
         END
       WHERE statut != 'Annulée';  -- Exclure les rendez-vous avec le statut "Annulée"
     `;
@@ -425,6 +426,7 @@ app.post('/reservations', verifyToken, (req, res) => {
           CASE
             WHEN statut IN ('En attente', 'En cours') AND datetime('now') >= date_reservation_2 THEN 'Terminée'
             WHEN statut = 'En attente' AND datetime('now') BETWEEN date_reservation_1 AND date_reservation_2 THEN 'En cours'
+            ELSE 'En attente'
           END
           WHERE statut != 'Annulée';  -- Exclure les rendez-vous avec le statut "Annulée"
       `;
